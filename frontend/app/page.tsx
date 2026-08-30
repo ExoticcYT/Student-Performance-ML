@@ -19,6 +19,7 @@ function Dropdown({ label_name, dropdown_elements, value, onChange }: {
         onChange={(e) => onChange(e.target.value)}
         className="mt-2 w-full rounded-lg bg-zinc-800 p-3 text-lg"
       >
+        <option value="">Select an Option</option>
         {dropdown_elements.map((element) => (
           <option value={element} key={element}>
             {element}
@@ -73,13 +74,15 @@ export default function Home() {
   const [learningDisabilities, setLearningDisabilities] = useState("");
   const [gender, setGender] = useState("");
 
+  const [prediction, setPrediction] = useState<number | null>(null);
+
   const predictionData = {
-    Hours_Studied: hoursStudied,
-    Attendance: attendancePercentage,
-    Sleep_Hours: avgSleep,
-    Previous_Scores: avgScores,
-    Tutoring_Sessions: tutoringSeshes,
-    Physical_Activity: avgPE,
+    Hours_Studied: Number(hoursStudied),
+    Attendance: Number(attendancePercentage),
+    Sleep_Hours: Number(avgSleep),
+    Previous_Scores: Number(avgScores),
+    Tutoring_Sessions: Number(tutoringSeshes),
+    Physical_Activity: Number(avgPE),
   
     Parental_Involvement: parentalInvolvement,
     Access_to_Resources: accessToResources,
@@ -97,16 +100,40 @@ export default function Home() {
   };
 
   const getPrediction = async() => {
-    const response = await fetch("https://localhost:8000/predict", {
+    const response = await fetch("http://127.0.0.1:8000/predict", {
       method: "POST",
       headers: {
-        "Content-Type":"application/json",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(predictionData),
     });
 
     const data = await response.json();
+
+    setPrediction(Math.round(data.predicted_exam_score));
+
   };
+
+  const isFormComplete =
+    hoursStudied !== "" &&
+    attendancePercentage !== "" &&
+    avgSleep !== "" &&
+    avgScores !== "" &&
+    tutoringSeshes !== "" &&
+    avgPE !== "" &&
+    parentalInvolvement !== "" &&
+    accessToResources !== "" &&
+    motivationLevel !== "" &&
+    familyIncome !== "" &&
+    teacherQuality !== "" &&
+    peerInfluence !== "" &&
+    parentEducationLevel !== "" &&
+    distanceFromHome !== "" &&
+    extracurricularActivities !== "" &&
+    internetAccess !== "" &&
+    schoolType !== "" &&
+    learningDisabilities !== "" &&
+    gender !== "";
 
   return (
   <main className="min-h-screen bg-zinc-950 text-white p-10">
@@ -262,11 +289,33 @@ export default function Home() {
           />
         </div>
       </section>
-      <section>
-        <button onClick={getPrediction}>
+      <section className="pt-8 flex justify-center">
+        <button 
+          disabled={!isFormComplete} 
+          onClick={getPrediction}
+          className="
+            px-8 py-3
+            rounded-xl
+            font-semibold text-lg
+            transition-all duration-200
+            bg-blue-600 text-white
+            hover:bg-blue-700 hover:-translate-y-0.5
+            disabled:bg-gray-400
+            disabled:opacity-60
+            disabled:cursor-not-allowed
+            disabled:hover:translate-y-0
+          "
+        >
           Predict
         </button>
       </section>
+      
+      {prediction !== null && (
+        <section className="mt-8 text-center">
+          <h2>Your Predicted Exam Score: </h2>
+          <p>{prediction}/100</p>
+        </section>
+      )}
     </div>
   </main>
   );
