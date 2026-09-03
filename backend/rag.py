@@ -55,11 +55,38 @@ def generate_answer(query):
         context.append(doc['text'])
 
     context_string = "\n\n".join(context)
-    contents = f"Context:\n{context_string}\n\nQuestion:\n{query}\n\nAnswer the question using the provided context."
+    prompt = f"""
+You are the AI assistant built into a Student Performance Predictor application.
+
+The application helps students understand factors that can influence
+academic performance, including studying, attendance, sleep, tutoring,
+and time management.
+
+Your job is to provide helpful and practical guidance to students.
+
+Use the provided context to answer the student's question.
+
+Only use information supported by the provided context.
+If the context does not contain enough information to answer the question,
+say that you don't have enough information rather than making something up.
+
+Keep your answers clear and reasonably concise.
+
+Do not use Markdown formatting, asterisks, or headings.
+Respond in plain text.
+
+Context:
+{context}
+
+Student's question:
+{query}
+
+Answer:
+"""
 
     response = client.models.generate_content(
-        model="gemini-3.7-flash",
-        contents=contents
+        model="gemini-3.6-flash",
+        contents=prompt
     )
 
     return response.text

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import joblib
 from pathlib import Path
 import pandas as pd
+from rag import generate_answer
 
 this_file = Path(__file__)
 backend_folder = this_file.parent
@@ -50,3 +51,11 @@ def predict(request: PredictionRequest):
     df = pd.DataFrame([data])
     prediction = model.predict(df)[0]
     return {"predicted_exam_score": prediction}
+
+class ChatRequest(BaseModel):
+    question: str
+
+@app.post("/chat")
+def chat(request: ChatRequest):
+    answer = generate_answer(request.question)
+    return {"answer": answer}

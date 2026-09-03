@@ -1,6 +1,7 @@
 "use client";
 
 import {useState} from "react";
+import Chatbot from "@/components/chatbot";
 
 function Dropdown({ label_name, dropdown_elements, value, onChange }: {
   label_name: string;
@@ -139,7 +140,7 @@ export default function Home() {
   <main className="min-h-screen bg-zinc-950 text-white p-10">
     <div className="max-w-8xl mx-auto">
       <h1 className="text-5xl font-bold">
-        Student Performance AI
+        WhatYouGonnaGet
       </h1>
 
       <p className="mt-2 text-zinc-400 text-lg">
@@ -316,6 +317,8 @@ export default function Home() {
           <p>{prediction}/100</p>
         </section>
       )}
+
+      <Chatbot/>
     </div>
   </main>
   );
