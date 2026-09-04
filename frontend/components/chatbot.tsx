@@ -61,7 +61,7 @@ export default function Chatbot() {
 
             // Send the question from Next.js → FastAPI
             const response = await fetch(
-                "http://127.0.0.1:8000/chat",
+                `${process.env.NEXT_PUBLIC_API_URL}/chat`,
                 {
                     method: "POST",
 
