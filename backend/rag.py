@@ -1,9 +1,13 @@
 from pathlib import Path
-from sentence_transformers import SentenceTransformer
+import json
+import numpy as np
 import faiss
+
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 import os
+
 
 load_dotenv()
 
@@ -11,50 +15,55 @@ gemini_api_key = os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=gemini_api_key)
 
-KNOWLEDGE_DIR = Path(__file__).parent/"knowledge"
 
-def load_documents():
-    documents = []
+BACKEND_DIR = Path(__file__).parent
 
-    for file_path in KNOWLEDGE_DIR.glob("*.txt"):
-        text = file_path.read_text(encoding="utf-8")
+INDEX_PATH = BACKEND_DIR / "faiss_index.bin"
+DOCUMENTS_PATH = BACKEND_DIR / "documents.json"
 
-        paragraphs = [paragraph.strip() for paragraph in text.split("\n\n") if paragraph.strip()]
 
-        for paragraph in paragraphs:
-            documents.append({"text": paragraph, "source": file_path.name})
+# Load the prebuilt FAISS index
+index = faiss.read_index(str(INDEX_PATH))
 
-    return documents
+# Load the documents corresponding to the vectors
+with open(DOCUMENTS_PATH, "r", encoding="utf-8") as file:
+    documents = json.load(file)
 
-documents = load_documents()
 
-# for document in documents:
-#     print(f"\nSOURCE: {document['source']}")
-#     print(document['text'])
-
-texts = [document['text'] for document in documents]
-
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-embeddings = embedding_model.encode(texts) #creates a 34x384 matrix 
-
-dimension = embeddings.shape[1] #384
-
-index = faiss.IndexFlatL2(dimension) #we need this to perform the search
-index.add(embeddings) #adding the matrix to the index, which is actually a numpy array with 34 iterations of 1x384 arrays
-
-#the testing worked, now we actually code the reusability
 def generate_answer(query):
-    query_embedding = embedding_model.encode(query) 
-    query_embedding = query_embedding.reshape(1, dimension) #end of process of making a 1x384 array from the query
-    k=3
-    distance, indices = index.search(query_embedding, k) #thats cuz this literally returns the distance and the indices, but the distance doesnt seem to bother us
+    # Embed the student's question
+    result = client.models.embed_content(
+        model="gemini-embedding-001",
+        contents=query,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_QUERY",
+            output_dimensionality=768
+        )
+    )
 
+    query_embedding = np.array(
+        result.embeddings[0].values,
+        dtype=np.float32
+    ).reshape(1, 768)
+
+
+    # Search the FAISS index
+    k = 3
+
+    distance, indices = index.search(query_embedding, k)
+
+
+    # Retrieve the matching documents
     context = []
-    for indice in indices[0]:
-        doc = documents[indice]
-        context.append(doc['text'])
+
+    for index_number in indices[0]:
+        document = documents[index_number]
+        context.append(document["text"])
+
 
     context_string = "\n\n".join(context)
+
+
     prompt = f"""
 You are the AI assistant built into a Student Performance Predictor application.
 
@@ -76,13 +85,14 @@ Do not use Markdown formatting, asterisks, or headings.
 Respond in plain text.
 
 Context:
-{context}
+{context_string}
 
 Student's question:
 {query}
 
 Answer:
 """
+
 
     response = client.models.generate_content(
         model="gemini-3.6-flash",
